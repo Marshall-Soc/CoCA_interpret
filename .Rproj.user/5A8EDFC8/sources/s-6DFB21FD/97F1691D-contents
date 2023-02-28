@@ -1,0 +1,814 @@
+
+##########################################
+##  scratch: R script for CMDist-CCA
+##  Note: Scratch script
+##  Author: Marshall A. Taylor
+##########################################
+
+### BEGIN ###
+
+##########################################
+
+# Install necessary packages
+
+    #setwd("~/Google Drive/CMD_CCA/")
+    #install.packages("pacman")
+    pacman::p_load(corclass, CMDist, readtext,
+                googlesheets4, dplyr, textclean,
+                tm, qdapDictionaries, 
+                stringr, tidyr, tidytext,
+                qgraph, tm, nnet, 
+                effects, reshape2, 
+                ggpubr, lsmeans,
+                rcompanion, psych,
+                grid, gridExtra, lemon,
+                RColorBrewer, corrplot, 
+                Hmisc, ggcorrplot, ggplotify, install = T)
+
+    #devtools::install_version("corclass", version = "0.1.1",
+    #repos = "http://cran.us.r-project.org")
+    library(corclass)
+
+##########################################
+
+##########################################
+
+# Load in and prep data
+blog.data <- readtext("https://uclspp.github.io/datasets/data/poliblogs2008.zip")
+ft.wv <- readRDS("../pre_trained_we/ft.cc.en.300D.2M.Rds")
+
+##########################################
+
+##########################################
+
+##########################################
+
+##########################################
+
+#Match posts using NER
+mccain.data <- readRDS("data/blog_data_ner_mccain.rds")
+mccain.data$named_entity <- NULL
+mccain.data <- mccain.data %>% distinct()
+
+obama.data <- readRDS("data/blog_data_ner_obama.rds")
+obama.data$named_entity <- NULL
+obama.data <- obama.data %>% distinct()
+
+blog.data <- left_join(blog.data, mccain.data[,c("doc_id","n_ppl_article","all_name","mccain","obama","biden","palin")],
+                       by = "doc_id")
+blog.data <- left_join(blog.data, obama.data[,c("doc_id","n_ppl_article","all_name","mccain","obama","biden","palin")],
+                       by = "doc_id", suffix=c(".mccain",".obama"))
+
+##########################################
+
+##########################################
+
+#Subset data
+blog.corpus <- VCorpus(VectorSource(blog.data$documents))
+# blog.corpus.sub <- tm_filter(blog.corpus, FUN = function(x) any(
+#   grep("immigration|migration|migrant|immigrant|immigrate|emigrate|expatriots|expatriot|visas|diaspora", 
+#        content(x)), ignore.case = T))
+
+#blog.corpus.sub.dtm <- DocumentTermMatrix(blog.corpus.sub) 
+# blog.corpus.sub.dtm <- DocumentTermMatrix(blog.corpus) 
+# blog.corpus.sub.dtm <- removeSparseTerms(blog.corpus.sub.dtm, .9999999)
+# 
+# list <- c("immigration","migration","migrant",
+#             "immigrant","immigrate","emigrate",
+#             "expatriots","expatriot","visas",
+#             "diaspora")
+# list %in% colnames(blog.corpus.sub.dtm)
+# 
+# blog.corpus.sub.dtm <- blog.corpus.sub.dtm[,c("immigration","migration","migrant",
+#                                               "immigrant","emigrate",
+#                                               "visas","diaspora"),]
+#                                               
+# blog.corpus.sub.dtm <- as.matrix(blog.corpus.sub.dtm) %>% as.data.frame()
+# blog.corpus.sub.dtm.2 <- blog.corpus.sub.dtm[which(rowSums(blog.corpus.sub.dtm)>=2),]
+# #nrow(blog.corpus.sub.dtm.2)
+# 
+# blog.data <- blog.data[rownames(blog.data) %in% rownames(blog.corpus.sub.dtm.2),]
+
+##########################################
+
+##########################################
+
+#Prep DTM
+blog.data.clean <- blog.data %>% 
+  mutate(documents = textclean::replace_non_ascii(documents) ) %>%
+  mutate(documents = textclean::replace_url(documents, replacement = " ") ) %>%
+  mutate(documents = textclean::replace_html(documents, replacement = " ") ) %>%
+  mutate(documents = textclean::replace_contraction(documents, contraction.key=qdapDictionaries::contractions, 
+                                                    ignore.case=TRUE) ) %>%
+  mutate(documents = str_replace_all(documents, "[[:punct:]]", " ")) %>%
+  mutate(documents = textclean::replace_ordinal(documents) ) %>%
+  mutate(documents = textclean::replace_number(documents) ) %>%
+  mutate(documents = stringr::str_replace_all(documents, "[\\s]+", " ") )   
+
+blog.dtm <- blog.data.clean %>% 
+  unnest_tokens(word, documents, to_lower = TRUE) %>% 
+  anti_join(get_stopwords(language="en", source="snowball") ) %>% 
+  filter(!str_detect(word, "[0-9]+") & 
+           str_length(word) > 1 ) %>% 
+  dplyr::count(text, word) %>%
+  cast_dtm(term = word, document = text, 
+           value = n, weighting = tm::weightTf) 
+
+blog.dtm <- removeSparseTerms(blog.dtm, .99)
+
+##########################################
+
+##########################################
+
+    # Prepare semantic direction CMDs
+    dims <- googlesheets4::read_sheet("1zy56q7yhrJS78cI8H6TZ8lgfn6EZeaL8YIpAHv2ZiSQ", 
+                                        range = "cd")
+
+      # add <- dims$add %in% rownames(ft.wv) %>% as.data.frame()
+      # sub <- dims$subtract %in% rownames(ft.wv) %>% as.data.frame()
+      # 
+      # df <- data.frame(matrix(ncol = 1, nrow = nrow(add)))
+      # colnames(df) <- "logical"
+      # df$logical <- "FALSE"
+      # 
+      # for (i in 1:nrow(add)) {
+      #   df[which(add[i,1] == "TRUE" & sub[i,1] == "TRUE")][i,1] <- "TRUE"
+      # }
+
+  # #Partisan
+  # partisan <- dims %>% 
+  #   filter(dimensions=="partisan" & in_embeddings==TRUE) %>%
+  #   select(add, subtract)
+  
+  #Race
+  race <- dims %>% 
+    filter(dimensions=="racial" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Gender
+  gender <- dims %>% 
+    filter(dimensions=="gender" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Morality
+  morality <- dims %>% 
+    filter(dimensions=="morality" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Purity
+  purity <- dims %>% 
+    filter(dimensions=="purity" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Safety
+  safety <- dims %>% 
+    filter(dimensions=="safety" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Govern
+  govern <- dims %>% 
+    filter(dimensions=="government" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Organization
+  org <- dims %>% 
+    filter(dimensions=="organization" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Skills
+  skills <- dims %>% 
+    filter(dimensions=="skills" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Status
+  ses <- dims %>% 
+    filter(dimensions=="status" & in_embeddings==TRUE) %>%
+    select(add, subtract)
+  
+  #Pairs
+  race.cd <- get_antodim(race, ft.wv)
+  gender.cd <- get_antodim(gender, ft.wv)
+  morality.cd <- get_antodim(morality, ft.wv)
+  purity.cd <- get_antodim(purity, ft.wv)
+  safety.cd <- get_antodim(safety, ft.wv)
+  govern.cd <- get_antodim(govern, ft.wv)
+  org.cd <- get_antodim(org, ft.wv)
+  skills.cd <- get_antodim(skills, ft.wv)
+  ses.cd <- get_antodim(ses, ft.wv)
+  
+  cd <- rbind(race.cd, gender.cd, morality.cd, purity.cd, safety.cd, 
+              govern.cd, org.cd, skills.cd, ses.cd)
+  
+##########################################
+
+##########################################
+
+    # CMDs
+    CMDs <- CMDist::CMDist(dtm=blog.dtm, 
+                                cd = cd,
+                                wv = ft.wv, 
+                                scale = TRUE)
+    
+    blog.data <- cbind(blog.data, CMDs[,2:10])
+
+##########################################
+
+##########################################
+
+# CCA
+blog.data <- readRDS("data/blog_data_status.rds")
+blog.data$named_entity <- NULL
+blog.data <- distinct(blog.data) %>% as.data.frame()
+
+classes <- cca(blog.data[,c("cmd.good.pole.4","cmd.man.pole.3","cmd.white.pole.2",
+                                   "cmd.young.pole.20","cmd.honorable.pole.10")],
+               filter.significance = T,
+               filter.value = 0.05, zero.action = "drop",
+               verbose = F)
+
+# Merge cca group labels with the dataset
+cca.group <- classes$membership %>% as.data.frame() 
+cca.group$rowid <- rownames(cca.group) # Get groups and their row IDs
+
+colnames(cca.group) <- c("group","rowid")
+
+blog.data$rowid <- rownames(blog.data) #Convert row IDs to a variable
+
+blog.data <- left_join(blog.data, cca.group, by = "rowid") #Merge
+
+##########################################
+
+##########################################
+
+# Class Correlation Networks
+cor1 <- classes$modules[[1]]$cormat
+cor2 <- classes$modules[[2]]$cormat
+cor3 <- classes$modules[[3]]$cormat
+cor4 <- classes$modules[[4]]$cormat
+cor5 <- classes$modules[[5]]$cormat
+
+max(abs(cor5[which((cor5!=1)==T)])) #Use to find the highest absolute
+  #correlation to standardize the graph edge widths/color intensity.
+
+png("figures/cca_plot1.png", width = 6, height = 4, units = 'in', res = 350)
+  # Class #1
+  qgraph(cor1,
+         graph = "cor",
+         minimum=.15, maximum=.88, threshold="sig", sampleSize=2395,
+         #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
+         layout = "spring", repulsion = 1.86, label.cex=2,
+         posCol="black", negCol="black", negDashed=T,
+         borders=T, shape = "circle", label.prop = 0.75,
+         curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
+         title="Class #1", labels=c("character","gender","race",
+                            "age","status")
+  )
+dev.off()
+
+png("figures/cca_plot2.png", width = 6, height = 4, units = 'in', res = 350)
+  #Class #2
+  qgraph(cor2,
+         graph = "cor",
+         minimum=.15, maximum=.88, threshold="sig", sampleSize=4650,
+         #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
+         layout = "spring", repulsion = 1.86, label.cex=2,
+         posCol="black", negCol="black", negDashed=T,
+         borders=T, shape = "circle", label.prop = 0.75,
+         curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
+         title="Class #2", labels=c("character","gender","race",
+                                    "age","status")
+  )
+dev.off()
+
+png("figures/cca_plot3.png", width = 6, height = 4, units = 'in', res = 350)
+  #Class #3
+  qgraph(cor3,
+         graph = "cor",
+         minimum=.15, maximum=.88, threshold="sig", sampleSize=1859,
+         #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
+         layout = "spring", repulsion = 1.86, label.cex=2,
+         posCol="black", negCol="black", negDashed=T,
+         borders=T, shape = "circle", label.prop = 0.75,
+         curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
+         title="Class #3", labels=c("character","gender","race",
+                                    "age","status")
+  )
+dev.off()
+
+png("figures/cca_plot4.png", width = 6, height = 4, units = 'in', res = 350)
+  # Class #4
+  qgraph(cor4,
+         graph = "cor",
+         minimum=.15, maximum=.88, threshold="sig", sampleSize=2489,
+         #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
+         layout = "spring", repulsion = 1.86, label.cex=2,
+         posCol="black", negCol="black", negDashed=T,
+         borders=T, shape = "circle", label.prop = 0.75,
+         curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
+         title="Class #4", labels=c("character","gender","race",
+                                    "age","status")
+  )
+dev.off()
+
+png("figures/cca_plot5.png", width = 6, height = 4, units = 'in', res = 350)
+  # Class #5
+  qgraph(cor5,
+         graph = "cor",
+         minimum=.15, maximum=.88, threshold="sig", sampleSize=1853,
+         #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
+         layout = "spring", repulsion = 1.86, label.cex=2,
+         posCol="black", negCol="black", negDashed=T,
+         borders=T, shape = "circle", label.prop = 0.75,
+         curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
+         title="Class #5", labels=c("character","gender","race",
+                                    "age","status")
+  )
+dev.off()
+
+
+#Correlation visuals
+vars <- c("cmd.good.pole.4","cmd.man.pole.3","cmd.white.pole.2",
+          "cmd.young.pole.20","cmd.honorable.pole.10")
+
+corr.data1 <- blog.data[which(blog.data$group=="1"),] #Subsets
+corr.data2 <- blog.data[which(blog.data$group=="2"),]
+corr.data3 <- blog.data[which(blog.data$group=="3"),]
+corr.data4 <- blog.data[which(blog.data$group=="4"),]
+corr.data5 <- blog.data[which(blog.data$group=="5"),]
+
+corr1 <- round(cor(corr.data1[vars]), 2) #Get bivariate corrs
+corr2 <- round(cor(corr.data2[vars]), 2)
+corr3 <- round(cor(corr.data3[vars]), 2)
+corr4 <- round(cor(corr.data4[vars]), 2)
+corr5 <- round(cor(corr.data5[vars]), 2)
+
+pmat1 <- cor_pmat(corr.data1[vars]) #Get corr p-values
+pmat2 <- cor_pmat(corr.data2[vars])
+pmat3 <- cor_pmat(corr.data3[vars])
+pmat4 <- cor_pmat(corr.data4[vars])
+pmat5 <- cor_pmat(corr.data5[vars])
+
+png("figures/cca_corr_plot1.png", width = 6, height = 4, units = 'in', res = 350)
+ggcorrplot(corr1, hc.order = F, type = "lower",
+           lab = TRUE, p.mat=as.matrix(pmat1[,-1]), sig.level=0.05,
+           colors=c("black","white","black")) + 
+  scale_y_discrete(limits = unique(colnames(corr1)),
+                   labels=c("character","gender","race","age","status")) +
+  scale_x_discrete(limits = unique(rownames(corr1)),
+                   labels=c("character","gender","race","age","status"))
+dev.off()
+
+png("figures/cca_corr_plot2.png", width = 6, height = 4, units = 'in', res = 350)
+ggcorrplot(corr2, hc.order = F, type = "lower",
+           lab = TRUE, p.mat=pmat2, sig.level=0.05,
+           colors=c("black","white","black")) + 
+  scale_y_discrete(limits = unique(colnames(corr2)),
+                   labels=c("character","gender","race","age","status")) +
+  scale_x_discrete(limits = unique(rownames(corr2)),
+                   labels=c("character","gender","race","age","status"))
+dev.off()
+
+png("figures/cca_corr_plot3.png", width = 6, height = 4, units = 'in', res = 350)
+ggcorrplot(corr3, hc.order = F, type = "lower",
+           lab = TRUE, p.mat=pmat3, sig.level=0.05,
+           colors=c("black","white","black")) + 
+  scale_y_discrete(limits = unique(colnames(corr3)),
+                   labels=c("character","gender","race","age","status")) +
+  scale_x_discrete(limits = unique(rownames(corr3)),
+                   labels=c("character","gender","race","age","status"))
+dev.off()
+
+png("figures/cca_corr_plot4.png", width = 6, height = 4, units = 'in', res = 350)
+ggcorrplot(corr4, hc.order = F, type = "lower",
+           lab = TRUE, p.mat=pmat4, sig.level=0.05,
+           colors=c("black","white","black")) + 
+  scale_y_discrete(limits = unique(colnames(corr4)),
+                   labels=c("character","gender","race","age","status")) +
+  scale_x_discrete(limits = unique(rownames(corr4)),
+                   labels=c("character","gender","race","age","status"))
+dev.off()
+
+png("figures/cca_corr_plot5.png", width = 6, height = 4, units = 'in', res = 350)
+ggcorrplot(corr5, hc.order = F, type = "lower",
+           lab = TRUE, p.mat=pmat5, sig.level=0.05,
+           colors=c("black","white","black")) + 
+  scale_y_discrete(limits = unique(colnames(corr5)),
+                   labels=c("character","gender","race","age","status")) +
+  scale_x_discrete(limits = unique(rownames(corr5)),
+                   labels=c("character","gender","race","age","status"))
+dev.off()
+
+
+
+
+
+# blog.data$group.x <- NULL
+# names(blog.data)[names(blog.data) == "group.y"] <- "group"
+# table(blog.data$group)
+
+# saveRDS(blog.data, file="data/blog_data_status.rds")
+# saveRDS(cor1, file="data/cor1.rds")
+# saveRDS(cor2, file="data/cor2.rds")
+# saveRDS(cor3, file="data/cor3.rds")
+# saveRDS(cor4, file="data/cor4.rds")
+# saveRDS(cor5, file="data/cor5.rds")
+
+##########################################
+
+##########################################
+
+#Some mlogit models
+model <- multinom(group ~ day*rating + n_ppl_article + rating*mccain +
+                    rating*biden + rating*bush + rating*obama + rating*palin + 
+                    rating*clinton, data = blog.data)
+
+blog.data$female <- 0
+blog.data[which(blog.data$clinton==1 | blog.data$palin==1),]$female <- 1
+table(blog.data$female, blog.data$palin)
+
+model2 <- multinom(group ~ n_ppl_article + rating + female + day,
+                   data = blog.data)
+
+female.rating <- Effect("female", model2, xlevels = list(day = 201))
+
+lsmeans(model2, pairwise ~ female | group, mode="prob", 
+        at=list(day=median(blog.data$day)))
+
+female.rating <- data.frame(female.rating$x, female.rating$prob, female.rating$lower.prob,
+                            female.rating$upper.prob)
+
+female.prob.plot <- ggplot(female.rating, aes(x="1", y=prob.X1, group=female, color=female)) +
+  geom_point(size=3, aes(x="1", color=female), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="1", ymin=L.prob.X1, ymax=U.prob.X1,
+                    color=female), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="2",  y=prob.X2, color=female), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="2", ymin=L.prob.X2, ymax=U.prob.X2,
+                    color=female), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="3",  y=prob.X3, color=female), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="3", ymin=L.prob.X3, ymax=U.prob.X3,
+                    color=female), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="4",  y=prob.X4, color=female), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="4", ymin=L.prob.X4, ymax=U.prob.X4,
+                    color=female), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="5",  y=prob.X5, color=female), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="5", ymin=L.prob.X5, ymax=U.prob.X5,
+                    color=female), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  ylim(.1,.5) +
+  ylab("Predicted Probability") + xlab("") +
+  #ylim(c(.12,.47)) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title.y=element_text(size=12),
+        plot.title=element_text(face="bold", size=12)) +
+  scale_color_manual(name="Gender", values=c("#55b748","#1696d2"),
+                     labels=c("Man (Obama, McCain, Biden, and/or Bush)",
+                              "Woman (Clinton and/or Palin)")) +
+  guides(color = guide_legend(title.position = "top",
+                              title.hjust = 0.5)) +
+  scale_x_discrete(breaks=c("1","2","3","4","5"), labels=c("Class #1","Class #2",
+                                                           "Class #3","Class #4","Class #5"))
+# scale_x_discrete(breaks=c("1","2","3","4","5"),
+#                  labels=c("Old\nInfluential Men,\nYoung\nMoral Women", "(Not) Old\nWhite Men",
+#                           "Anything But\nRace", "Ascribed vs.\nAchieved",
+#                           "Anything But\nGender"))
+
+png("figures/cca_female_probs.png", width = 8, height = 6, units = 'in', res = 350)
+female.prob.plot
+dev.off()
+
+
+z <- summary(model)$coefficients/summary(model)$standard.errors
+p <- (1 - pnorm(abs(z), 0, 1)) * 2
+p
+
+fit.rating <- Effect("rating", model, xlevels = list(day = 201))
+
+fit.rating <- data.frame(fit.rating$x, fit.rating$prob, fit.rating$lower.prob,
+                         fit.rating$upper.prob)
+
+rating.prob.plot <- ggplot(fit.rating, aes(x="1", y=prob.X1, group=rating, color=rating)) +
+  geom_point(size=3, aes(x="1", color=rating), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="1", ymin=L.prob.X1, ymax=U.prob.X1,
+                    color=rating), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="2",  y=prob.X2, color=rating), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="2", ymin=L.prob.X2, ymax=U.prob.X2,
+                    color=rating), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="3",  y=prob.X3, color=rating), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="3", ymin=L.prob.X3, ymax=U.prob.X3,
+                    color=rating), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="4",  y=prob.X4, color=rating), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="4", ymin=L.prob.X4, ymax=U.prob.X4,
+                    color=rating), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  geom_point(size=3, aes(x="5",  y=prob.X5, color=rating), 
+             position = position_dodge(width=.3)) +
+  geom_errorbar(aes(x="5", ymin=L.prob.X5, ymax=U.prob.X5,
+                    color=rating), 
+                width=.1,
+                position = position_dodge(width=.3)) +
+  ylab("Predicted Probability") + xlab("") +
+  #ylim(c(.12,.47)) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title.y=element_text(size=12),
+        plot.title=element_text(face="bold", size=12)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative","Liberal")) +
+  guides(color = guide_legend(title.position = "top",
+                              title.hjust = 0.5)) +
+  scale_x_discrete(breaks=c("1","2","3","4","5"), labels=c("Class #1","Class #2",
+                                                 "Class #3","Class #4","Class #5"))
+  # scale_x_discrete(breaks=c("1","2","3","4","5"),
+  #                  labels=c("Old\nInfluential Men,\nYoung\nMoral Women", "(Not) Old\nWhite Men",
+  #                           "Anything But\nRace", "Ascribed vs.\nAchieved",
+  #                           "Anything But\nGender"))
+
+png("figures/cca_rating_probs.png", width = 8, height = 6, units = 'in', res = 350)
+  rating.prob.plot
+dev.off()
+
+# Add in rating
+obama.rating <- lsmeans(model, pairwise ~ rating*obama | group, mode = "prob", at = list(
+  day = median(blog.data$day), n_ppl_article = mean(blog.data$n_ppl_article),
+  biden = F, mccain = F, palin = F, clinton = F, biden = F, bush = F))
+
+obama.rating <- data.frame(obama.rating$lsmeans)[,c(1,2,3,4,7,8)]
+
+mccain.rating <- lsmeans(model, pairwise ~ mccain*rating | group, mode = "prob", at = list(
+  date = mean(blog.data$date), n_ppl_article = mean(blog.data$n_ppl_article),
+  biden = F, obama = F, palin = F, clinton = F, biden = F, bush = F))
+
+mccain.rating <- data.frame(mccain.rating$lsmeans)[,c(1,2,3,4,7,8)]
+
+names(obama.rating)[names(obama.rating) == "obama"] <- "candidate"
+names(mccain.rating)[names(mccain.rating) == "mccain"] <- "candidate"
+
+obama.rating$candidate <- plyr::revalue(factor(obama.rating$candidate), c("FALSE"="No","TRUE"="obama"))
+mccain.rating$candidate <- plyr::revalue(factor(mccain.rating$candidate), c("FALSE"="No","TRUE"="mccain"))
+
+candidate.rating <- rbind(obama.rating, mccain.rating)
+candidate.rating <- distinct(candidate.rating)
+
+cand.prob.cons.plot <- ggplot(candidate.rating[which(candidate.rating$rating=="Conservative"),],
+                                aes(x=group, y=prob, group=candidate, color=candidate)) +
+  geom_point(size=1, aes(color=candidate), position = position_dodge(width=.3)) +
+  geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL,
+                    color=candidate), width=.1,
+                position = position_dodge(width=.3)) +
+  ylab("Predicted Probability") + xlab("") +
+  labs(title="Conservative Blog Posts") +
+  ylim(c(min(candidate.rating$lower.CL), max(candidate.rating$upper.CL))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="", values=c("gray50","#003366","#a51414"),
+                     labels=c("No Mention of McCain, Clinton, Biden, Bush, Palin, or Obama",
+                              "Mentions Obama, but not Clinton, Biden, Bush, Palin, or McCain",
+                              "Mentions McCain, but not Clinton, Biden, Bush, Palin, or Obama")) +
+  guides(color = guide_legend(title.position = "left",
+                              title.hjust = 0.5, direction="vertical")) +
+  scale_x_discrete(breaks=c(1,2,3,4,5), labels=c("Class #1","Class #2",
+                                               "Class #3","Class #4","Class #5")) #+
+  # scale_x_discrete(breaks=c(1,2,3,4,5), labels=c("Old\nInfluential Men,\nYoung\nMoral Women", "(Not) Old\nWhite Men",
+  #                                                "Anything But\nRace", "Ascribed vs.\nAchieved",
+  #                                                "Anything But\nGender")) +
+  #coord_flip()
+
+cand.prob.lib.plot <- ggplot(candidate.rating[which(candidate.rating$rating=="Liberal"),],
+                              aes(x=group, y=prob, group=candidate, color=candidate)) +
+  geom_point(size=1, aes(color=candidate), position = position_dodge(width=.3)) +
+  geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL,
+                    color=candidate), width=.1,
+                position = position_dodge(width=.3)) +
+  ylab("Predicted Probability") + xlab("") +
+  labs(title="Liberal Blog Posts") +
+  ylim(c(min(candidate.rating$lower.CL), max(candidate.rating$upper.CL))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=12),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="", values=c("gray50","#003366","#a51414"),
+                     labels=c("No Mention of McCain, Clinton, Biden, Bush, Palin, or Obama",
+                              "Mentions Obama, but not Clinton, Biden, Bush, Palin, or McCain",
+                              "Mentions McCain, but not Clinton, Biden, Bush, Palin, or Obama")) +
+  guides(color = guide_legend(title.position = "left",
+                              title.hjust = 0.5, direction="vertical")) +
+  scale_x_discrete(breaks=c(1,2,3,4,5), labels=c("Class #1","Class #2",
+                                               "Class #3","Class #4","Class #5")) #+
+  # scale_x_discrete(breaks=c(1,2,3,4,5), labels=c("Old\nInfluential Men,\nYoung\nMoral Women", "(Not) Old\nWhite Men",
+  #                                                "Anything But\nRace", "Ascribed vs.\nAchieved",
+  #                                                "Anything But\nGender")) +
+  #coord_flip()
+
+png("figures/cca_female_probs.png", width = 14, height = 8.5, units = 'in', res = 350)
+ggarrange(female.prob.plot, ggarrange(cand.prob.cons.plot, cand.prob.lib.plot,
+                                      common.legend = T, legend = "bottom", align="hv",
+                                      nrow=2),
+          align="v", widths=c(1.5,1), ncol=2, labels=c("A","B"))
+dev.off()
+
+png("figures/cca_candidate_probs.png", width = 11, height = 5, units = 'in', res = 350)
+  ggarrange(cand.prob.cons.plot, cand.prob.lib.plot, common.legend = T, legend = "bottom",
+            align = "hv")
+dev.off()
+
+#Time
+time.rating <- Effect(c("day","rating"), model, xlevels = list(day = seq(1, 366, by = 33)))
+
+time.rating <- data.frame(time.rating$x, time.rating$prob, time.rating$lower.prob,
+                          time.rating$upper.prob)
+time.rating <- merge(time.rating, blog.data[,c("day","date")], 
+                     by = "day") %>% distinct()
+
+time.prob.plot.1 <- ggplot(time.rating,
+                              aes(x=date, y=prob.X1, group=rating, color=rating)) +
+  geom_line(aes(color=rating)) +
+  geom_ribbon(aes(ymin=L.prob.X1, ymax=U.prob.X1, fill=rating), alpha=.2) +
+  ylab("") + xlab("") +
+  labs(title="Class #1") +
+  #labs(title="Old Influential Men,\nYoung Moral Women") +
+  ylim(c(min(time.rating$L.prob.X1, time.rating$L.prob.X2, time.rating$L.prob.X3, 
+             time.rating$L.prob.X4, time.rating$L.prob.X5),
+         max(time.rating$U.prob.X1, time.rating$U.prob.X2, time.rating$U.prob.X3, 
+             time.rating$U.prob.X4, time.rating$U.prob.X5))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=8, angle=45, vjust=.9, hjust=1),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative", "Liberal")) +
+  scale_fill_manual(name="Ideology", values=c("#a51414","#003366"),
+                    labels=c("Conservative", "Liberal")) 
+
+time.prob.plot.2 <- ggplot(time.rating,
+                           aes(x=date, y=prob.X2, group=rating, color=rating)) +
+  geom_line(aes(color=rating)) +
+  geom_ribbon(aes(ymin=L.prob.X2, ymax=U.prob.X2, fill=rating), alpha=.2) +
+  ylab("") + xlab("") +
+  labs(title="Class #2") +
+  #labs(title="(Not) Old White Men") +
+  ylim(c(min(time.rating$L.prob.X1, time.rating$L.prob.X2, time.rating$L.prob.X3, 
+             time.rating$L.prob.X4, time.rating$L.prob.X5),
+         max(time.rating$U.prob.X1, time.rating$U.prob.X2, time.rating$U.prob.X3, 
+             time.rating$U.prob.X4, time.rating$U.prob.X5))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=8, angle=45, vjust=.9, hjust=1),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative", "Liberal")) +
+  scale_fill_manual(name="Ideology", values=c("#a51414","#003366"),
+                    labels=c("Conservative", "Liberal"))
+
+time.prob.plot.3 <- ggplot(time.rating,
+                           aes(x=date, y=prob.X3, group=rating, color=rating)) +
+  geom_line(aes(color=rating)) +
+  geom_ribbon(aes(ymin=L.prob.X3, ymax=U.prob.X3, fill=rating), alpha=.2) +
+  ylab("") + xlab("") +
+  labs(title="Class #3") +
+  #labs(title="Anything But Race") +
+  ylim(c(min(time.rating$L.prob.X1, time.rating$L.prob.X2, time.rating$L.prob.X3, 
+             time.rating$L.prob.X4, time.rating$L.prob.X5),
+         max(time.rating$U.prob.X1, time.rating$U.prob.X2, time.rating$U.prob.X3, 
+             time.rating$U.prob.X4, time.rating$U.prob.X5))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=8, angle=45, vjust=.9, hjust=1),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative", "Liberal")) +
+  scale_fill_manual(name="Ideology", values=c("#a51414","#003366"),
+                    labels=c("Conservative", "Liberal")) 
+
+time.prob.plot.4 <- ggplot(time.rating,
+                           aes(x=date, y=prob.X4, group=rating, color=rating)) +
+  geom_line(aes(color=rating)) +
+  geom_ribbon(aes(ymin=L.prob.X4, ymax=U.prob.X4, fill=rating), alpha=.2) +
+  labs(title="Class #4") +
+  #labs(title="Ascribed vs. Achieved") +
+  ylim(c(min(time.rating$L.prob.X1, time.rating$L.prob.X2, time.rating$L.prob.X3, 
+             time.rating$L.prob.X4, time.rating$L.prob.X5),
+         max(time.rating$U.prob.X1, time.rating$U.prob.X2, time.rating$U.prob.X3, 
+             time.rating$U.prob.X4, time.rating$U.prob.X5))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=8, angle=45, vjust=.9, hjust=1),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative", "Liberal")) +
+  scale_fill_manual(name="Ideology", values=c("#a51414","#003366"),
+                    labels=c("Conservative", "Liberal"))
+
+time.prob.plot.5 <- ggplot(time.rating,
+                           aes(x=date, y=prob.X5, group=rating, color=rating)) +
+  geom_line(aes(color=rating)) +
+  geom_ribbon(aes(ymin=L.prob.X5, ymax=U.prob.X5, fill=rating), alpha=.2) +
+  labs(title="Class #5") +
+  #labs(title="Anything But Gender") +
+  ylim(c(min(time.rating$L.prob.X1, time.rating$L.prob.X2, time.rating$L.prob.X3, 
+             time.rating$L.prob.X4, time.rating$L.prob.X5),
+         max(time.rating$U.prob.X1, time.rating$U.prob.X2, time.rating$U.prob.X3, 
+             time.rating$U.prob.X4, time.rating$U.prob.X5))) +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=12),
+        legend.title=element_text(face="bold", size=12),
+        legend.position="right",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(size=8, angle=45, vjust=.9, hjust=1),
+        axis.title=element_text(size=12),
+        plot.title=element_text(face="bold", size=12, hjust=.5)) +
+  scale_color_manual(name="Ideology", values=c("#a51414","#003366"),
+                     labels=c("Conservative", "Liberal")) +
+  scale_fill_manual(name="Ideology", values=c("#a51414","#003366"),
+                    labels=c("Conservative", "Liberal"))
+
+g_legend <- function(a.gplot){ 
+  tmp <- ggplot_gtable(ggplot_build(a.gplot)) 
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
+  legend <- tmp$grobs[[leg]] 
+  return(legend)} 
+
+legend <- g_legend(time.prob.plot.5) 
+legend <- as_ggplot(legend)
+
+png("figures/cca_time_probs.png", width = 8, height = 6, units = 'in', res = 350)
+  time.plots <- ggarrange(time.prob.plot.1, time.prob.plot.2, time.prob.plot.3, 
+                          time.prob.plot.4, time.prob.plot.5, legend,
+            legend = "none", align = "hv", nrow=2, ncol=3)
+  annotate_figure(time.plots, left = text_grob("Predicted Probability", 
+                                               size=12, rot=90))
+dev.off()
+
+##########################################
+
+##########################################
+
+### END ###

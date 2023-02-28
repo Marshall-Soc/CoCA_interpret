@@ -1,0 +1,238 @@
+## ---------------------------------------------- #
+## Project Title: Concept Class Analysis
+## Script Purpose:
+## Date: 2020-07-21 
+## Author: Dustin S. Stoltz and Marshall A. Taylor
+# ---------------------------------------------- #
+
+# -----------------------------------------------------------------------------
+# CREATE semantic directions
+# -----------------------------------------------------------------------------
+
+    dim.list <- c("partisan", "racial", "gender", "morality", 
+                  "purity", "safety", "government", 
+                "organization", "skills", "status", "affluence",
+                "education", "employment", "immigration", "policy", 
+                "borders", "legality", "gay rights", "attractiveness", 
+                "age")
+
+    # dim.list <- c("partisan")
+
+    # initialize mat for multiple sem directions
+    sem.direct <- matrix(ncol = ncol(ft.wv) )
+
+    for(i in dim.list){
+
+        sd.temp <- dims %>% 
+                 filter(dimensions==i & 
+                    in_embeddings==TRUE) %>%
+                select(add, subtract) %>%
+                get_direction(., ft.wv)
+
+        sem.direct <- rbind(sem.direct, sd.temp)
+        # nrow(sem.direct)
+        print(i)
+
+        }
+
+        # remove first row NAs
+        sem.direct <- sem.direct[-1, , drop = FALSE]
+        dim(sem.direct) # 20 by 300
+
+        # check similar words
+        cos.sim <- text2vec::sim2(x = ft.wv, y = sem.direct, method = "cosine")
+        
+        head(sort(cos.sim[ ,1], decreasing = TRUE), 20)
+
+    #     dim.list <- c("Harm", "Fairness", "Loyalty", "Authority", "Purity")
+    # # initialize
+    # sem.direct <- matrix(ncol = ncol(ft.wv) )
+
+    # for(i in dim.list){
+
+    #     sd.temp <- dims %>% 
+    #              filter(dimensions==i) %>%
+    #             select(Add, Subtract) %>%
+    #             get_direction(., ft.wv, method = "LSLW")
+
+    #     sem.direct <- rbind(sem.direct, sd.temp)
+    #     # nrow(sem.direct)
+    #     print(i)
+    #     }
+
+    #     sem.direct <- sem.direct[-1,]
+    #     dim(sem.direct)
+
+# -----------------------------------------------------------------------------
+# CMDist
+# -----------------------------------------------------------------------------
+
+    # CMDs
+    CMDs <- CMDist::CMDist(dtm=blog.dtm, 
+                                cv = sem.direct, # concept vector
+                                wv = ft.wv, # word vectors
+                                scale = TRUE)
+
+    # blog.data.c <- blog.data.b[ , -c(18:35)]
+    colnames(CMDs) <- c("docs", "cmd.liberal.2")
+    blog.data.c <- left_join(blog.data.clean, CMDs, by = c("article_id" = "docs") )
+    dim(blog.data.c)
+
+    saveRDS(blog.data.c, "data/blog_data_20200724.rds")
+
+    blog.data.c <- readRDS("data/blog_data_20200724.rds")
+    # colnames(blog.data[ , 19:38])
+
+    # Add Dates
+    # dates <- as_tibble(seq(as.Date("2008/1/1"), as.Date("2008/12/31"), "days") )
+    # dates$day <- seq(1:366)
+    # colnames(dates) <- c("date", "day")
+    # blog.data.b <- left_join(blog.data, dates)
+
+# -----------------------------------------------------------------------------
+#  PLOT CMDs Density
+# -----------------------------------------------------------------------------
+
+    # get variance
+    out <- sapply(CMDs[,2:6], function(x) c(sum=sum(x), var=var(x), sd=sd(x)))
+
+    # initialize
+    p.list <- list()
+    for(i in 2:ncol(CMDs) ){
+
+        x = colnames(CMDs)[i]
+        lab = round(out[2, i-1], 4)
+
+        p.list[[i]] <- CMDs %>% 
+        ggdensity(x = x, add = "median", rug = FALSE, fill = "#1696d2", alpha = 0.8) +
+        theme_minimal() +
+        # geom_label(aes(x = 2.5, y = .35), label = lab)
+        annotate("text", x = 2.5, y = .35, label = lab )
+    }
+
+    p.list[[1]] <- NULL
+    length(p.list) # 5
+
+    png("figures/cmd_haidt_density_variance.png", width = 5, height = 5, units = 'in', res = 350)
+    ggarrange(plotlist=p.list, ncol=2, nrow=3)
+    dev.off()
+
+
+    library(ggcorrplot)
+    corr <- round( cor(CMDs[, 2:6] ), 2)
+    # corr <- round( cor(blog.data.c[, 2:6] ), 2)
+   # p.mat <- cor_pmat(CMDs[, 2:6])
+
+    ggcorrplot(corr, 
+               hc.order = TRUE, 
+               type = "lower",
+               lab = TRUE)
+
+
+# -----------------------------------------------------------------------------
+# Predict CMD for Political Ideology
+# -----------------------------------------------------------------------------
+
+    model.a <- blog.data.c %>% 
+        group_by(article_id) %>%
+        summarize(cmd.partisan = as.numeric(first(cmd.liberal.2) ),
+        # summarize(cmd.partisan = as.numeric(first(cmd.liberal.pole.1) ),
+                  rating = first(rating),
+                  day = first(day),
+                  blog = first(blog),
+                  n_ppl_article = first(n_ppl_article),
+                  date = first(date) ) %>%
+        glm(scale(cmd.partisan) ~ 
+                    rating +
+                    date +
+                    date:date +
+                    rating:date
+                    # blog +
+                    , data = .,        
+                    family="gaussian")
+
+        # jtools::summ(model.a)
+        # broom::glance(model.a)
+
+    aver.liberal <- cplot(model.a, x="date", draw=TRUE,
+                data = blog.data.c %>% filter(rating=="Liberal") %>% group_by(article_id) ) %>% 
+                mutate(rating = "Liberal")
+
+    aver.conserv <- cplot(model.a, x="date", draw=TRUE,
+                data = blog.data.c %>% filter(rating=="Conservative") %>% group_by(article_id) ) %>% 
+                mutate(rating = "Conservative")
+    
+    p.ame <- rbind(aver.liberal, aver.conserv) %>% 
+    ggplot(aes(x=xvals,y=yvals, color=rating, fill=rating) ) +
+            geom_ribbon(aes(x=xvals, ymin = lower, ymax = upper, fill=rating), alpha=.8, color=NA) +
+            geom_line(alpha=1, color = "#000000") +
+            ylab("Engagement with 'Conservative — Liberal'") + xlab("") +
+            # ylim(c(.5,-.5)) +
+            theme_bw() +
+            theme(axis.text.y=element_text(size=10),
+                    legend.title=element_text(face="bold", size=10),
+                    legend.position="right",
+                    panel.grid.major = element_blank(), 
+                    panel.grid.minor = element_blank(),
+                    axis.text.x = element_text(size=10),
+                    axis.title.y=element_text(face="bold", size=10),
+                    plot.title=element_text(face="bold", size=10)) +
+            scale_fill_manual(name="Blog Rating", 
+                               values=c("#a51414","#003366"),
+                               labels=c("Conservative","Liberal")) +
+            guides(color = guide_legend(title.position = "top",
+                                        title.hjust = 0.5)) 
+
+    png("figures/cmd_predicted_values_b.png", width = 6, height = 5, units = 'in', res = 350)
+    # ggarrange(p.ame, p.dens, ncol=1, common.legend=TRUE, legend="bottom")
+    p.ame
+    dev.off()
+
+# -----------------------------------------------------------------------------
+#
+# -----------------------------------------------------------------------------
+
+   
+ model.b <- blog.data.c %>% 
+        group_by(article_id) %>%
+        summarize(cmd.partisan = first(cmd.liberal.pole.1),
+                 care = first(cmd.safe.pole.1),
+                 fair = first(cmd.fair.pole.2),
+                 loyalty = first(cmd.loyalty.pole.3),
+                 authority = first(cmd.authority.pole.4),
+                 purity = first(cmd.purity.pole.5),
+                  rating = first(rating),
+                  day = first(day),
+                  blog = first(blog),
+                  n_ppl_article = first(n_ppl_article),
+                  date = first(date) ) %>%
+        glm(cmd.partisan ~ 
+                    care +
+                    fair +
+                    loyalty +
+                    authority +
+                    purity +
+                    care:rating +
+                    fair:rating +
+                    loyalty:rating +
+                    authority:rating +
+                    purity:rating
+                    # blog +
+                    , data = .,        
+                    family="gaussian")
+
+                    jtools::summ(model.b)
+
+
+    # p.dens <- blog.data %>% 
+    #     group_by(article_id) %>%
+    #     summarize(day = first(day) ,
+    #               partisan = first(rating)) %>%
+    # ggdensity(x = "day",
+    #     add = "mean", rug = FALSE,
+    #     color = "partisan", fill = "partisan", palette = c("#a51414","#003366"))
+
+
+# -----------------------------------------------------------------------------
+# THE END
+# -----------------------------------------------------------------------------

@@ -1,0 +1,234 @@
+# -----------------------------------------------------------------------------
+# PACKAGES
+# -----------------------------------------------------------------------------
+    
+
+    # install.packages("rJava")
+    # install.packages("pdftools")
+    # pacman::p_load_gh("trinker/entity")
+
+    pacman::p_load(tidyverse, rvest,readtext,
+                   ggpubr, googlesheets4,
+                   entity, ggplot2, reshape2,
+                   install = TRUE)
+
+    urbnthemes::set_urbn_defaults(style = 'print')
+
+# -----------------------------------------------------------------------------
+# DATA
+# -----------------------------------------------------------------------------
+
+    # df.cb <- read_sheet('', range = '')
+    # 1
+    df.raw  <- readtext("https://uclspp.github.io/datasets/data/poliblogs2008.zip")
+    # df.blog <- readRDS("data/blog_data.rds")
+
+# -----------------------------------------------------------------------------
+#
+# -----------------------------------------------------------------------------
+
+    df.people.full <- person_entity(df.raw$documents)
+    df.temp.full <- df.people.full
+    length(df.temp.full) # 13,246
+
+# -----------------------------------------------------------------------------
+#
+# -----------------------------------------------------------------------------
+    
+    # Replace Curly Apostrophes
+     for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, "’", "'") )
+        }
+
+    # Replace Periods
+     for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed("."), "") )
+        }
+    
+    # Replace Apostrophes ESS
+     for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed("'s"), "") )
+        }
+
+    # Replace "
+    for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed(' "'), '') )
+        }
+
+    # Replace ”
+    for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed('”'), '') )
+        }
+
+    # Replace (
+    for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed('('), '') )
+        }
+
+    # Replace )
+    for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, fixed(')'), '') )
+        }
+
+    # Replace double space with one
+    for(j in 1:length(bad.names) ){
+        df.temp.full <-  lapply(df.temp.full, function(x) str_replace_all(x, "\\s+", " ") )
+        }
+
+
+
+    # # Remove Non-Names
+    bad.names <- googlesheets4::read_sheet("1bv0-kYitQ4LBu7T9woUt83VQYyE9dFqycTVeKw6u3jE", 
+                                    range = "bad")
+
+     for(i in 1:nrow(bad.names) ){
+        rmv <- paste0("^\\b", bad.names$bad[i],"\\b$" )
+        print(rmv)
+        df.temp.full <- lapply(df.temp.full, function(x) str_remove_all(x, rmv) )
+        }
+
+    tail(out)
+    tail(df.temp.full)
+
+    # Replace Names
+    cb <- googlesheets4::read_sheet("1bv0-kYitQ4LBu7T9woUt83VQYyE9dFqycTVeKw6u3jE", 
+                                    range = "cb")
+
+    for(j in 1:nrow(cb) ){
+
+        pattern <- cb[j, 2, drop = TRUE]
+        replace <- cb[j, 1, drop = TRUE]
+        pat <- paste0("^\\b", pattern,"\\b$" )
+        df.temp.full <- lapply(df.temp.full, function(x) str_replace_all(x, pat, replace) )
+
+        }
+
+    # Removes duplicate names *within* each list and blanks from cleaning
+    df.temp.full <- lapply(df.temp.full, setdiff, "")
+
+
+    # Replace double space with one
+    # [[13142]]
+    # character(0)
+    df.temp.full <- lapply(df.temp.full, function(x) if(identical(x, character(0))) NA_character_ else x)
+        
+    #
+    df.plot <- df.temp.full %>% 
+            melt() %>% 
+            as_tibble() %>% 
+            rename(named_entity = value, article_id = L1)  %>%
+            mutate(article_id = as.character(article_id) ) %>%
+            mutate_if(grepl('Obama',.), ~replace(., grepl('Obama', .), "Barack Obama") ) %>%
+            mutate_if(grepl('McCain',.), ~replace(., grepl('McCain', .), "John McCain") ) %>% 
+            mutate_if(grepl('Hillary',.), ~replace(., grepl('Hillary', .), "Hillary Clinton") ) %>% 
+            group_by(article_id) %>% 
+            add_count(name = "n_ppl_article") %>%
+            mutate(all_name = paste0(named_entity, collapse = ";") ) %>%
+
+    df.full.b <- df.full %>%
+            mutate(mccain = ifelse(str_detect(all_name, "McCain"), TRUE, FALSE) ) %>%
+            mutate(obama = ifelse(str_detect(all_name, "Obama"), TRUE, FALSE) ) %>%
+            mutate(biden = ifelse(str_detect(all_name, "Biden"), TRUE, FALSE) ) %>%
+            mutate(palin = ifelse(str_detect(all_name, "Palin"), TRUE, FALSE ) ) %>%
+            mutate(clinton = ifelse(str_detect(all_name, "Hillary"), TRUE, FALSE) ) %>%
+            mutate(bush = ifelse(str_detect(all_name, "Bush"), TRUE, FALSE) ) %>%
+            mutate(named_entity = case_when(named_entity == "John"    & mccain==TRUE ~ "John McCain",  TRUE ~ named_entity)) %>%
+            mutate(named_entity = case_when(named_entity == "Barry"   & obama==TRUE ~ "Barack Obama",  TRUE ~ named_entity)) %>%
+            mutate(named_entity = case_when(named_entity == "Joe"     & biden==TRUE ~ "Joe Biden",  TRUE ~ named_entity)) %>% 
+            mutate(named_entity = case_when(named_entity == "Sarah"   & palin==TRUE ~ "Sarah Palin",  TRUE ~ named_entity)) %>% 
+            mutate(named_entity = case_when(named_entity == "Hillary" & clinton==TRUE ~ "Hillary Clinton",  TRUE ~ named_entity)) 
+
+        # summary(df.full.b)
+        # head(df.full.b$text)
+
+    df.full <- df.raw %>% tibble::rownames_to_column(var = "article_id") %>% left_join(df.plot)
+    saveRDS(df.full.b, "data/blog_data_ner.rds")
+    df.full <- readRDS("data/blog_data_ner.rds")
+
+
+    df.mccain  <- df.full %>% filter(mccain == 1 & obama == 0) %>% group_by(article_id)
+    df.obama   <- df.full %>% filter(obama == 1 & mccain == 0) %>% group_by(article_id)
+    # df.obmcain <- df.plot %>% filter(obama == 1 & mccain == 1) %>% group_by(L1)
+    # df.obama.alone   <- df.plot %>% filter(obama == 1 & n_article <= 2) %>% group_by(L1)
+    # df.mccain.alone  <- df.plot %>% filter(mccain == 1 & n_article <= 2) %>% group_by(L1)
+
+    saveRDS(df.obama, "data/blog_data_ner_obama.rds")
+    saveRDS(df.mccain, "data/blog_data_ner_mccain.rds")
+
+# -----------------------------------------------------------------------------
+#
+# -----------------------------------------------------------------------------
+
+    df.plot.b <- df.plot %>%
+            group_by(L1) %>% 
+            add_count(name = "n_article") %>% 
+            ungroup() %>% 
+            group_by(value) %>% 
+            add_count(name = "n") %>% 
+            ungroup() %>% 
+            arrange(-n)
+    
+    df.plot.c <- df.plot.b %>%
+            select(value, n) %>%
+            # filter(grepl("McCain", value)) %>%
+            # filter(n >=50) %>%
+            filter(n <=2 & n >=2) %>%
+            # filter(n <= 200& n >=100) %>%
+            arrange(-n) %>%
+            # top_n(100) %>%
+            mutate(names = factor(value)) %>% distinct() %>% 
+            top_n(100)
+
+    p <- df.plot.c %>% 
+    ggplot(aes(x = reorder(names, n), y = n)) + 
+        geom_bar(stat = "identity") +
+        coord_flip() +
+        ggtitle("Names Occuring in 100 or More Blog Posts (of 13,246)")
+
+
+    png('figures/ner_counts.png', 
+    width = 6, height = 12, units = 'in', res = 600)
+    p
+    dev.off()
+
+# -----------------------------------------------------------------------------
+# Other Stats
+# -----------------------------------------------------------------------------
+
+    blog.data %>% 
+              group_by(article_id) %>% 
+              summarize(n_ppl_article = first(n_ppl_article),
+                        obama = first(obama),
+                        mccain = first(mccain)) %>% summary()
+
+
+    blog.data %>%
+             group_by(article_id) %>% 
+             filter(n_ppl_article==234) %>% 
+             summarize(documents = first(documents) ) %>% select(documents)
+
+
+    # blog.data %>% 
+    #         group_by(article_id) %>% 
+    #         summarize(n_ppl_article = first(n_ppl_article), 
+    #                     obama = first(obama),
+    #                     biden = first(biden),
+    #                     mccain = first(mccain), 
+    #                     palin = first(palin),
+    #                     clinton = first(clinton) ) %>% 
+    #         filter(obama == 0 &
+    #                biden == 0 &
+    #                mccain == 0 &
+    #                palin == 0 &
+    #                clinton == 0) %>% summary()
+
+
+# -----------------------------------------------------------------------------
+# Subsets
+# -----------------------------------------------------------------------------
+   
+    # match <- grepl("Obama|McCain|obama|mccain", df.raw$documents)
+    # df.subset <- df.raw[match, ] # 8210 / 13246
+
+    # df.people <- person_entity(df.subset$documents)
+    # df.temp <- df.people

@@ -1,0 +1,123 @@
+gmodels::CrossTable(blog.data$group, blog.data$blog, chisq=T, format="SPSS")
+
+corr1 <- rcorr(t(class1), type="pearson")$r
+corr2 <- rcorr(t(class2), type="pearson")$r
+corr3 <- rcorr(t(class3), type="pearson")$r
+corr4 <- rcorr(t(class4), type="pearson")$r
+corr5 <- rcorr(t(class5), type="pearson")$r
+
+p.mat1 <- rcorr(t(class1), type="pearson")$P
+p.mat2 <- rcorr(t(class2), type="pearson")$P
+p.mat3 <- rcorr(t(class3), type="pearson")$P
+p.mat4 <- rcorr(t(class4), type="pearson")$P
+p.mat5 <- rcorr(t(class5), type="pearson")$P
+
+corr.bin1 <- corr1
+corr.bin2 <- corr2
+corr.bin3 <- corr3
+corr.bin4 <- corr4
+corr.bin5 <- corr5
+
+corr.bin1[which(p.mat1 >= .05)]  <- NA
+corr.bin2[which(p.mat2 >= .05)]  <- NA
+corr.bin3[which(p.mat3 >= .05)]  <- NA
+corr.bin4[which(p.mat4 >= .05)]  <- NA
+corr.bin5[which(p.mat5 >= .05)]  <- NA
+
+corr.bin1 <- (corr.bin1 < 0) + 0
+corr.bin2 <- (corr.bin2 < 0) + 0
+corr.bin3 <- (corr.bin3 < 0) + 0
+corr.bin4 <- (corr.bin4 < 0) + 0
+corr.bin5 <- (corr.bin5 < 0) + 0
+
+gmodels::CrossTable(table(blog.data$group, blog.data$blog), chisq=T, format="SPSS")
+
+diag(corr.bin1) <- NA
+diag(corr.bin2) <- NA
+diag(corr.bin3) <- NA
+diag(corr.bin4) <- NA
+diag(corr.bin5) <- NA
+
+table1 <- table(corr.bin1)
+table2 <- table(corr.bin2)
+table3 <- table(corr.bin3)
+table4 <- table(corr.bin4)
+table5 <- table(corr.bin5)
+
+table1[[2]]/(table1[[1]] + table1[[2]])
+table2[[2]]/(table2[[1]] + table2[[2]])
+table3[[2]]/(table3[[1]] + table3[[2]])
+table4[[2]]/(table4[[1]] + table4[[2]])
+table5[[2]]/(table5[[1]] + table5[[2]])
+
+corr.plot1 <- corrplot::corrplot(corr1, order="hclust", type="lower", hclust.method = "average",
+                   tl.pos="n", addgrid=NA, p.mat = p.mat1, sig.level = .05, insig = "blank",
+                   col=brewer.pal(n=11, name="PuOr"), title="Class #1: 43% Inversion")
+corr.plot2 <- corrplot::corrplot(corr2, order="hclust", type="lower", hclust.method = "average",
+                                 tl.pos="n", addgrid=NA, p.mat = p.mat2, sig.level = .05, insig = "blank",
+                                 col=brewer.pal(n=11, name="PuOr"), title="Class #2: 43% Inversion")
+corr.plot3 <- corrplot::corrplot(corr3, order="hclust", type="lower", hclust.method = "average",
+                                 tl.pos="n", addgrid=NA, p.mat = p.mat3, sig.level = .05, insig = "blank",
+                                 col=brewer.pal(n=11, name="PuOr"), title="Class #3: 48% Inversion")
+corr.plot4 <- corrplot::corrplot(corr4, order="hclust", type="lower", hclust.method = "average",
+                                 tl.pos="n", addgrid=NA, p.mat = p.mat4, sig.level = .05, insig = "blank",
+                                 col=brewer.pal(n=11, name="PuOr"), title="Class #4: 47% Inversion")
+corr.plot5 <- corrplot::corrplot(corr5, order="hclust", type="lower", hclust.method = "average",
+                                 tl.pos="n", addgrid=NA, p.mat = p.mat5, sig.level = .05, insig = "blank",
+                                 col=brewer.pal(n=11, name="PuOr"), title="Class #5: 43% Inversion")
+
+png("figures/inversion_cor1.png", width = 11, height = 8.5, 
+    units = 'in', res = 350)
+  corrplot(corr1, order="hclust", type="lower", hclust.method = "average",
+                  tl.pos="n", addgrid=NA, p.mat = p.mat1, sig.level = .05, insig = "blank",
+                  col=brewer.pal(n=11, name="PuOr"), title="Class #1: 43% Inversion",
+           mar=c(0,0,2,0))
+dev.off()
+
+png("figures/inversion_cor2.png", width = 11, height = 8.5, 
+    units = 'in', res = 350)
+  corrplot(corr2, order="hclust", type="lower", hclust.method = "average",
+         tl.pos="n", addgrid=NA, p.mat = p.mat2, sig.level = .05, insig = "blank",
+         col=brewer.pal(n=11, name="PuOr"), title="Class #2: 43% Inversion",
+  mar=c(0,0,2,0))
+dev.off()
+
+png("figures/inversion_cor3.png", width = 11, height = 8.5, 
+    units = 'in', res = 350)
+  corrplot(corr3, order="hclust", type="lower", hclust.method = "average",
+         tl.pos="n", addgrid=NA, p.mat = p.mat3, sig.level = .05, insig = "blank",
+         col=brewer.pal(n=11, name="PuOr"), title="Class #3: 48% Inversion",
+  mar=c(0,0,2,0))
+dev.off()
+
+png("figures/inversion_cor4.png", width = 11, height = 8.5, 
+    units = 'in', res = 350)
+  corrplot(corr4, order="hclust", type="lower", hclust.method = "average",
+         tl.pos="n", addgrid=NA, p.mat = p.mat4, sig.level = .05, insig = "blank",
+         col=brewer.pal(n=11, name="PuOr"), title="Class #4: 47% Inversion",
+         mar=c(0,0,2,0))
+dev.off()
+
+png("figures/inversion_cor5.png", width = 11, height = 8.5, 
+    units = 'in', res = 350)
+  corrplot(corr5, order="hclust", type="lower", hclust.method = "average",
+         tl.pos="n", addgrid=NA, p.mat = p.mat5, sig.level = .05, insig = "blank",
+         col=brewer.pal(n=11, name="PuOr"), title="Class #5: 43% Inversion",
+         mar=c(0,0,2,0))
+dev.off()
+
+prop.test(table1[[2]], (table1[[1]] + table1[[2]]), p = 0.2,
+          alternative = "greater", correct = F) #reject null
+
+prop.test(table2[[2]], (table2[[1]] + table2[[2]]), p = 0.2,
+          alternative = "greater", correct = F) #reject null
+
+prop.test(table3[[2]], (table3[[1]] + table3[[2]]), p = 0.2,
+          alternative = "greater", correct = F) #reject null
+
+prop.test(table4[[2]], (table4[[1]] + table4[[2]]), p = 0.2,
+          alternative = "greater", correct = F) #reject null
+
+prop.test(table5[[2]], (table5[[1]] + table5[[2]]), p = 0.2,
+          alternative = "greater", correct = F) #reject null
+

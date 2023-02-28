@@ -1,0 +1,41 @@
+
+    df.blog <- readRDS("data/blog_data_status.rds")
+
+
+# -----------------------------------------------------------------------------
+# Representative Texts
+# -----------------------------------------------------------------------------
+
+    # Below are the blog posts from Class #2 that were particularly high on the 
+    # Gender dimension (i.e. engaging the ``masculine'' pole of the dimension).
+    df.blog %>% filter(group == 2) %>% 
+           arrange(cmd.man.pole.3) %>% 
+           slice_max(cmd.man.pole.3, n = 7) %>% 
+           select(documents)
+    df.blog %>% filter(group == 2) %>% 
+           arrange(cmd.man.pole.3) %>% 
+           slice_min(cmd.man.pole.3, n = 7) %>% 
+           select(documents)
+
+
+    # here is a blog post from Class #5 that is high on the Race dimension
+    df.blog %>% filter(group == 5) %>% 
+           arrange(cmd.white.pole.2) %>% 
+           slice_min(cmd.white.pole.2, n = 9) %>% 
+           select(documents, blog)
+
+
+    df.blog %>% filter(group == 3) %>% 
+           arrange(cmd.honorable.pole.10) %>% 
+           slice_max(cmd.honorable.pole.10, n = 3) %>% select(documents)
+
+    df.blog %>% filter(group == 4 & 
+                       rating == "Conservative") %>% 
+           arrange(cmd.man.pole.3) %>% 
+           slice_min(cmd.man.pole.3, n = 2) %>% select(documents)
+
+    df.blog %>% 
+                filter(group == 5 & 
+                    rating == "Liberal") %>% 
+        arrange(cmd.honorable.pole.10) %>% 
+        slice_min(cmd.honorable.pole.10, n = 4) %>% select(documents)     
