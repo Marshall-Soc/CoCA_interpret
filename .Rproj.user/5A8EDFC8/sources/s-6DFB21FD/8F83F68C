@@ -3,7 +3,7 @@
     "path": "~/Dropbox/CoCA_interpret/code/4_table3_table4.R",
     "project_path": "code/4_table3_table4.R",
     "type": "r_source",
-    "hash": "915269885",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1677610881636.0,
@@ -17,11 +17,11 @@
         "scrollLine": "15"
     },
     "folds": "",
-    "lastKnownWriteTime": 1677621293,
+    "lastKnownWriteTime": 1677685737,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1677621293670,
+    "last_content_update": 1677685737,
     "read_only": false,
     "read_only_alternatives": []
 }

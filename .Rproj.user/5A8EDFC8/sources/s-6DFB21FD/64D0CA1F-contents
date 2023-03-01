@@ -55,7 +55,7 @@
     # Prep DTM
     blog.dtm <- blog.data %>% 
                 group_by(article_id) %>%
-                summarize(documents_cleaned = first(documents_cleaned),
+                dplyr::summarize(documents_cleaned = first(documents_cleaned),
                          text = first(text) ) %>%
         unnest_tokens(word, documents_cleaned, to_lower = TRUE) %>% 
         anti_join(get_stopwords(language="en", source="snowball") ) %>% 
