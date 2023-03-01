@@ -24,7 +24,7 @@ for(i in dim.list){
 
 # remove first row NAs
 sem.direct <- sem.direct[-1, , drop = FALSE]
-dim(sem.direct) # 20 by 300
+dim(sem.direct) # 5 by 300
 
 # -----------------------------------------------------------------------------
 # CoCA
