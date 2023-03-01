@@ -73,7 +73,7 @@ summary(fit2)
 
 
 
-fit1.2 <- lavaan(model, data = blog.data, model.type)
+fit1.2 <- sem(model, data = blog.data, group = "group")
 summary(fit1.2)
 
 
