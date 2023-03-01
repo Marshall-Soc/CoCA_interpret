@@ -47,7 +47,6 @@ blog.data <- left_join(blog.data, cca.group, by = c("article_id" = "rowid"))
 
 
 blog.data <- left_join(blog.data, cca.group2, by = c("article_id" = "rowid")) 
-blog.data <- left_join(blog.data, cca.group2, by = c("article_id" = "rowid")) 
 blog.data <- left_join(blog.data, cca.group3, by = c("article_id" = "rowid")) 
 blog.data <- left_join(blog.data, cca.group4, by = c("article_id" = "rowid")) 
 
@@ -61,24 +60,38 @@ cmds <- rbind(classes$modules[[1]]$cmds,
 
 blog.data <- left_join(blog.data, cmds, by = "article_id")
 
-vars <- c("white_pole","man_pole","good_pole","influential_pole","young_pole","group")
+# Multiple group test of schema invariance
+model <- 'white_pole ~~ man_pole
+          white_pole ~~ good_pole
+          white_pole ~~ influential_pole
+          white_pole ~~ young_pole
+          man_pole ~~ good_pole
+          man_pole ~~ influential_pole
+          man_pole ~~ young_pole
+          good_pole ~~ influential_pole
+          good_pole ~~ young_pole
+          influential_pole ~~ young_pole
+          '
+fit.diff <- cfa(model, data = blog.data, group = "group")
+summary(fit.diff)
 
-fit1 <- lavCor(blog.data[vars], output = "fit", group = "group")
-summary(fit1)
+fit.same <- cfa(model, data = blog.data, group = "group", 
+            group.equal = c("residuals","residual.covariances"))
+summary(fit.same)
 
-BIC(fit1)
-
-fit2 <- lavCor(blog.data[vars], output = "fit", group = "group", model.type = "restricted")
-summary(fit2)
-
-
-
-model <- 'dim =~ white_pole + man_pole + good_pole + influential_pole + young_pole'
-
-fit1.2 <- sem(model, data = blog.data, group = "group")
-summary(fit1.2, standardized = T, fit.measures = T)
-
+lavTestLRT(fit.same,fit.diff)
 
 # -----------------------------------------------------------------------------
 # Make table #3 (multiple group test comparing k-class partitions)
 # -----------------------------------------------------------------------------
+
+fit.diff2 <- cfa(model, data = blog.data, group = "group2")
+fit.diff3 <- cfa(model, data = blog.data, group = "group3")
+fit.diff4 <- cfa(model, data = blog.data, group = "group4")
+
+for (i in list(fit.diff2,fit.diff3,fit.diff4,fit.diff)) {
+  
+  as.data.frame(fitMeasures(i))[c("aic","bic"),] |>
+    print()
+  
+}
