@@ -36,14 +36,14 @@ cca.group4$rowid <- 1:nrow(cca.group4)
 cca.group4$rowid <- 1:nrow(cca.group4) %>% as.character()
 
 # Merge cca group labels with the dataset
-cca.group <- classes$membership %>% as.data.frame() 
-cca.group$rowid <- rownames(cca.group) # Get groups and their row IDs
-
-colnames(cca.group) <- c("group","rowid")
-
-blog.data$rowid <- rownames(blog.data) #Convert row IDs to a variable
-
-blog.data <- left_join(blog.data, cca.group, by = c("article_id" = "rowid"))
+# cca.group <- classes$membership %>% as.data.frame() 
+# cca.group$rowid <- rownames(cca.group) # Get groups and their row IDs
+# 
+# colnames(cca.group) <- c("group","rowid")
+# 
+# blog.data$rowid <- rownames(blog.data) #Convert row IDs to a variable
+# 
+# blog.data <- left_join(blog.data, cca.group, by = c("article_id" = "rowid"))
 
 
 blog.data <- left_join(blog.data, cca.group2, by = c("article_id" = "rowid")) 
