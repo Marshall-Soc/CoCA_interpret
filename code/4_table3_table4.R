@@ -66,15 +66,17 @@ vars <- c("white_pole","man_pole","good_pole","influential_pole","young_pole","g
 fit1 <- lavCor(blog.data[vars], output = "fit", group = "group")
 summary(fit1)
 
+BIC(fit1)
+
 fit2 <- lavCor(blog.data[vars], output = "fit", group = "group", model.type = "restricted")
 summary(fit2)
 
 
 
-
+model <- 'dim =~ white_pole + man_pole + good_pole + influential_pole + young_pole'
 
 fit1.2 <- sem(model, data = blog.data, group = "group")
-summary(fit1.2)
+summary(fit1.2, standardized = T, fit.measures = T)
 
 
 # -----------------------------------------------------------------------------
