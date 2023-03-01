@@ -61,12 +61,20 @@ cmds <- rbind(classes$modules[[1]]$cmds,
 
 blog.data <- left_join(blog.data, cmds, by = "article_id")
 
-model <- 'dim =~ white_pole + man_pole + good_pole + influential_pole + young_pole'
+vars <- c("white_pole","man_pole","good_pole","influential_pole","young_pole","group")
 
-fit1 <- cfa(model, data = blog.data, group = "group")
-fit2 <- cfa(model, data = blog.data, group = "group", group.equal = c("intercepts","loadings"))
+fit1 <- lavCor(blog.data[vars], output = "fit", group = "group")
+summary(fit1)
 
-lavTestLRT(fit1, fit2)
+fit2 <- lavCor(blog.data[vars], output = "fit", group = "group", model.type = "restricted")
+summary(fit2)
+
+
+
+
+
+fit1.2 <- lavaan(model, data = blog.data, model.type)
+summary(fit1.2)
 
 
 # -----------------------------------------------------------------------------
