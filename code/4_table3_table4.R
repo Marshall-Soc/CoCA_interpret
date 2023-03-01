@@ -19,10 +19,6 @@ classes4 <- graph.adjacency(classes$cormat,
   leading.eigenvector.community(., steps = 5) #
 table(classes4$membership)
 
-classes5 <- graph.adjacency(classes$cormat, 
-                            mode="undirected", weighted=T) %>%
-  leading.eigenvector.community(., steps = 6) #
-table(classes5$membership)
 
 cca.group2 <- classes2$membership %>% as.data.frame()
 colnames(cca.group2) <- "group2"
@@ -39,12 +35,33 @@ colnames(cca.group4) <- "group4"
 cca.group4$rowid <- 1:nrow(cca.group4)
 cca.group4$rowid <- 1:nrow(cca.group4) %>% as.character()
 
+# Merge cca group labels with the dataset
+cca.group <- classes$membership %>% as.data.frame() 
+cca.group$rowid <- rownames(cca.group) # Get groups and their row IDs
 
-blog.data <- left_join(blog.data, cca.group2, by = "rowid") 
-blog.data <- left_join(blog.data, cca.group3, by = "rowid") 
-blog.data <- left_join(blog.data, cca.group4, by = "rowid") 
+colnames(cca.group) <- c("group","rowid")
 
-model <- 'dim =~ cmd.liberal.pole.1 + cmd.white.pole.2 + cmd.man.pole.3 + cmd.good.pole.4 + cmd.honorable.pole.10'
+blog.data$rowid <- rownames(blog.data) #Convert row IDs to a variable
+
+blog.data <- left_join(blog.data, cca.group, by = c("article_id" = "rowid"))
+
+
+blog.data <- left_join(blog.data, cca.group2, by = c("article_id" = "rowid")) 
+blog.data <- left_join(blog.data, cca.group2, by = c("article_id" = "rowid")) 
+blog.data <- left_join(blog.data, cca.group3, by = c("article_id" = "rowid")) 
+blog.data <- left_join(blog.data, cca.group4, by = c("article_id" = "rowid")) 
+
+
+cmds <- rbind(classes$modules[[1]]$cmds,
+              classes$modules[[2]]$cmds,
+              classes$modules[[3]]$cmds,
+              classes$modules[[4]]$cmds,
+              classes$modules[[5]]$cmds) %>%
+  add_rownames(var = "article_id")
+
+blog.data <- left_join(blog.data, cmds, by = "article_id")
+
+model <- 'dim =~ white_pole + man_pole + good_pole + influential_pole + young_pole'
 
 fit1 <- cfa(model, data = blog.data, group = "group")
 fit2 <- cfa(model, data = blog.data, group = "group", group.equal = c("intercepts","loadings"))
