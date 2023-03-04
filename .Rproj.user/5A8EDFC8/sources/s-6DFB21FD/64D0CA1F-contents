@@ -25,11 +25,13 @@
 
     # Bad names
     bad.names <- readxl::read_excel("data/ner_cleaning.xlsx",
-                               sheet = "bad")
+                               sheet = "bad") # Only necessary if you want to
+                                                    #run the NER script
     
     # To replace names
     cb <- readxl::read_excel("data/ner_cleaning.xlsx",
-                                    sheet = "cb")
+                                    sheet = "cb") # Only necessary if you want to
+                                                     #run the NER script
     
     # Embeddings
     ft.wv <- readRDS("data/ft.cc.en.300D.2M.Rds")
@@ -55,7 +57,7 @@
     # Prep DTM
     blog.dtm <- blog.data %>% 
                 group_by(article_id) %>%
-                summarize(documents_cleaned = first(documents_cleaned),
+                dplyr::summarize(documents_cleaned = first(documents_cleaned),
                          text = first(text) ) %>%
         unnest_tokens(word, documents_cleaned, to_lower = TRUE) %>% 
         anti_join(get_stopwords(language="en", source="snowball") ) %>% 
@@ -68,3 +70,26 @@
     dim(blog.dtm) # 13246 by 67432
     # dim(removeSparseTerms(blog.dtm, .998)) # 13246  10027
     blog.dtm <- removeSparseTerms(blog.dtm, .998)  # 13246  10027
+    
+    
+# -----------------------------------------------------------------------------
+# Scripts
+# -----------------------------------------------------------------------------
+
+source("code/2_CoCA.R")
+# source("code/2_ner.R")
+source("code/2_models.R")
+source("code/2_models.R")
+source("code/3_fig1.R")
+source("code/3_fig2.R")
+source("code/3_fig3.R")
+source("code/3_fig4.R")
+source("code/3_fig5.R")
+source("code/3_fig6.R")
+source("code/4_table1.R")
+source("code/4_table2.R")  
+source("code/4_table3_table4.R")
+source("code/4_representative_texts.R")
+    
+    
+    
