@@ -3,7 +3,7 @@
 # Make figure #4
 # -----------------------------------------------------------------------------
 
-fit.rating <- Effect("rating", model, xlevels = list(day = 201))
+fit.rating <- Effect("rating", model)
 
 fit.rating <- data.frame(fit.rating$x, fit.rating$prob, fit.rating$lower.prob,
                          fit.rating$upper.prob)
