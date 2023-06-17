@@ -4,7 +4,7 @@
 # -----------------------------------------------------------------------------
 
 # Left panel
-female.rating <- Effect("female", model2, xlevels = list(day = 201))
+female.rating <- Effect("female", model2)
 
 female.rating <- data.frame(female.rating$x, female.rating$prob, female.rating$lower.prob,
                             female.rating$upper.prob)
