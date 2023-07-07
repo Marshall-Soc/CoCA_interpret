@@ -3,14 +3,20 @@
 # Get corr and p-value matrices
 # -----------------------------------------------------------------------------
 
-vars <- c("cmd.good.pole.4","cmd.man.pole.3","cmd.white.pole.2",
-          "cmd.young.pole.20","cmd.honorable.pole.10")
+vars <- c("white_pole","man_pole","good_pole",
+          "influential_pole","young_pole")
 
 corr.data1 <- blog.data[which(blog.data$group=="1"),] #Subsets
 corr.data2 <- blog.data[which(blog.data$group=="2"),]
 corr.data3 <- blog.data[which(blog.data$group=="3"),]
 corr.data4 <- blog.data[which(blog.data$group=="4"),]
 corr.data5 <- blog.data[which(blog.data$group=="5"),]
+
+corr.data1 <- cbind(corr.data1, classes$modules[[1]]$cmds)
+corr.data2 <- cbind(corr.data2, classes$modules[[2]]$cmds)
+corr.data3 <- cbind(corr.data3, classes$modules[[3]]$cmds)
+corr.data4 <- cbind(corr.data4, classes$modules[[4]]$cmds)
+corr.data5 <- cbind(corr.data5, classes$modules[[5]]$cmds)
 
 corr1 <- round(cor(corr.data1[vars]), 2) #Get bivariate corrs
 corr2 <- round(cor(corr.data2[vars]), 2)
@@ -34,7 +40,7 @@ cor5 <- classes$modules[[5]]$cormat
 # Get corr networks
 # -----------------------------------------------------------------------------
 
-n1 <- qgraph(cor1,
+n1 <- qgraph::qgraph(cor1,
        graph = "cor",
        minimum=.15, maximum=.88, threshold="sig", sampleSize=2395,
        #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
@@ -42,9 +48,9 @@ n1 <- qgraph(cor1,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #1", labels=c("character","gender","race",
-                                  "age","status"))
-n2 <- qgraph(cor2,
+       title="Class #1", labels=c("race","gender","character",
+                                  "status","age"))
+n2 <- qgraph::qgraph(cor2,
        graph = "cor",
        minimum=.15, maximum=.88, threshold="sig", sampleSize=4650,
        #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
@@ -52,10 +58,10 @@ n2 <- qgraph(cor2,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #2", labels=c("character","gender","race",
-                                  "age","status"))
+       title="Class #2", labels=c("race","gender","character",
+                                  "status","age"))
 
-n3 <- qgraph(cor3,
+n3 <- qgraph::qgraph(cor3,
        graph = "cor",
        minimum=.15, maximum=.88, threshold="sig", sampleSize=1859,
        #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
@@ -63,10 +69,10 @@ n3 <- qgraph(cor3,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #3", labels=c("character","gender","race",
-                                  "age","status"))
+       title="Class #3", labels=c("race","gender","character",
+                                  "status","age"))
 
-n4 <- qgraph(cor4,
+n4 <- qgraph::qgraph(cor4,
        graph = "cor",
        minimum=.15, maximum=.88, threshold="sig", sampleSize=2489,
        #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
@@ -74,10 +80,10 @@ n4 <- qgraph(cor4,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #4", labels=c("character","gender","race",
-                                  "age","status"))
+       title="Class #4", labels=c("race","gender","character",
+                                  "status","age"))
 
-n5 <- qgraph(cor5,
+n5 <- qgraph::qgraph(cor5,
        graph = "cor",
        minimum=.15, maximum=.88, threshold="sig", sampleSize=1853,
        #Not plotting corrs < |.15|. Max non-diagonal abs(corr) = .813.
@@ -85,8 +91,8 @@ n5 <- qgraph(cor5,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #5", labels=c("character","gender","race",
-                                  "age","status"))
+       title="Class #5", labels=c("race","gender","character",
+                                  "status","age"))
 
 # -----------------------------------------------------------------------------
 # Get corr heatmaps
@@ -94,43 +100,62 @@ n5 <- qgraph(cor5,
 
 p1 <- ggcorrplot(corr1, hc.order = F, type = "lower",
            lab = TRUE, p.mat=as.matrix(pmat1[,-1]), sig.level=0.05,
-           colors=c("black","white","black")) + 
+           colors=c("black","white","black"),
+           lab_col=c(rep("white",10)), lab_size=8, tl.cex=16) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
-                   labels=c("character","gender","race","age","status")) +
+                   labels=c("race","gender","character",
+                            "status","age")) +
   scale_x_discrete(limits = unique(rownames(corr1)),
-                   labels=c("character","gender","race","age","status"))
+                   labels=c("race","gender","character",
+                            "status","age"))
 
 p2 <- ggcorrplot(corr2, hc.order = F, type = "lower",
                  lab = TRUE, p.mat=as.matrix(pmat2[,-1]), sig.level=0.05,
-                 colors=c("black","white","black")) + 
+                 colors=c("black","white","black"),
+                 lab_col=c(rep("white",6),"black",rep("white",2),"black"), lab_size=8,
+                tl.cex=16) +  
   scale_y_discrete(limits = unique(colnames(corr1)),
-                   labels=c("character","gender","race","age","status")) +
+                   labels=c("race","gender","character",
+                            "status","age")) +
   scale_x_discrete(limits = unique(rownames(corr1)),
-                   labels=c("character","gender","race","age","status"))
+                   labels=c("race","gender","character",
+                            "status","age"))
 
 p3 <- ggcorrplot(corr3, hc.order = F, type = "lower",
                  lab = TRUE, p.mat=as.matrix(pmat3[,-1]), sig.level=0.05,
-                 colors=c("black","white","black")) + 
+                 colors=c("black","white","black"),
+                 lab_col=c("white","black",rep("white",2),"black",rep("white",2),rep("black",2),"white"), 
+                 lab_size=8, tl.cex=16) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
-                   labels=c("character","gender","race","age","status")) +
+                   labels=c("race","gender","character",
+                            "status","age")) +
   scale_x_discrete(limits = unique(rownames(corr1)),
-                   labels=c("character","gender","race","age","status"))
+                   labels=c("race","gender","character",
+                            "status","age"))
 
 p4 <- ggcorrplot(corr4, hc.order = F, type = "lower",
                  lab = TRUE, p.mat=as.matrix(pmat4[,-1]), sig.level=0.05,
-                 colors=c("black","white","black")) + 
+                 colors=c("black","white","black"),
+                 lab_col=c("white",rep("black",2),rep("white",2),rep("black",5)), lab_size=8, 
+                 tl.cex=16) +  
   scale_y_discrete(limits = unique(colnames(corr1)),
-                   labels=c("character","gender","race","age","status")) +
+                   labels=c("race","gender","character",
+                            "status","age")) +
   scale_x_discrete(limits = unique(rownames(corr1)),
-                   labels=c("character","gender","race","age","status"))
+                   labels=c("race","gender","character",
+                            "status","age"))
 
 p5 <- ggcorrplot(corr5, hc.order = F, type = "lower",
                  lab = TRUE, p.mat=as.matrix(pmat5[,-1]), sig.level=0.05,
-                 colors=c("black","white","black")) + 
+                 colors=c("black","white","black"),
+                 lab_col=c("black",rep("white",3),rep("black",3),rep("white",3)), lab_size=8, 
+                 tl.cex=16) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
-                   labels=c("character","gender","race","age","status")) +
+                   labels=c("race","gender","character",
+                            "status","age")) +
   scale_x_discrete(limits = unique(rownames(corr1)),
-                   labels=c("character","gender","race","age","status"))
+                   labels=c("race","gender","character",
+                            "status","age"))
 
 # -----------------------------------------------------------------------------
 # Put the plot together

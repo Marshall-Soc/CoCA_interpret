@@ -68,27 +68,20 @@ df[3,3] <- table3[[2]]/(table3[[1]] + table3[[2]])
 df[4,3] <- table4[[2]]/(table4[[1]] + table4[[2]])
 df[5,3] <- table5[[2]]/(table5[[1]] + table5[[2]])
 
-  #Bootstrap test
-n_boot <- 1000
 
-df_boot <- data.frame(matrix(nrow = n_boot, ncol = nrow(df)))
-
-for (i in 1:n_boot) {
-  
-  for (k in 1:nrow(df)) {
-    
-  num_negative <- sample(0:1, size = df[k,2], replace = T)
-  
-  df_boot[i,k] <- table(num_negative)[[2]]
-  
-  }
-  
-}
-
-df[1,4] <- sum(df_boot[,1] >= table1[[2]])/df[1,2]
-df[2,4] <- sum(df_boot[,2] >= table2[[2]])/df[2,2]
-df[3,4] <- sum(df_boot[,3] >= table3[[2]])/df[3,2]
-df[4,4] <- sum(df_boot[,4] >= table4[[2]])/df[4,2]
-df[5,4] <- sum(df_boot[,5] >= table5[[2]])/df[5,2]
+df[1,4] <- prop.test(x = df[1,1], n = df[1,2], p = .1, 
+                     alternative = "greater", correct = F)$p.value
+df[2,4] <- prop.test(x = df[2,1], n = df[2,2], p = .1, 
+                     alternative = "greater", correct = F)$p.value
+df[3,4] <- prop.test(x = df[3,1], n = df[3,2], p = .1, 
+                     alternative = "greater", correct = F)$p.value
+df[4,4] <- prop.test(x = df[4,1], n = df[4,2], p = .1, 
+                     alternative = "greater", correct = F)$p.value
+df[5,4] <- prop.test(x = df[5,1], n = df[5,2], p = .1, 
+                     alternative = "greater", correct = F)$p.value
 
 print(df)
+
+
+
+
