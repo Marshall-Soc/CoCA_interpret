@@ -3,5 +3,5 @@
 # Make table #2
 # -----------------------------------------------------------------------------
 
-CrossTable(blog.data$group, blog.data$blog, chisq=T, format="SPSS") %>%
+CrossTable(classes$membership, blog.data$blog, chisq=T, format="SPSS") %>%
   print()

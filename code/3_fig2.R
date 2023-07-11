@@ -3,14 +3,14 @@
 # Make figure #2
 # -----------------------------------------------------------------------------
 
-which.select <- c("cmd.white.pole.2", "cmd.good.pole.4", "cmd.man.pole.3",
-                  "cmd.honorable.pole.10", "cmd.young.pole.20")
+which.select <- c("white_pole", "good_pole", "man_pole",
+                  "influential_pole", "young_pole")
 
-corr.1 <- blog.data %>% filter(group == 1) %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
-corr.2 <- blog.data %>% filter(group == 2) %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
-corr.3 <- blog.data %>% filter(group == 3) %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
-corr.4 <- blog.data %>% filter(group == 4) %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
-corr.5 <- blog.data %>% filter(group == 5) %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
+corr.1 <- classes$modules[[1]]$cmds %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
+corr.2 <- classes$modules[[2]]$cmds %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
+corr.3 <- classes$modules[[3]]$cmds %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
+corr.4 <- classes$modules[[4]]$cmds %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
+corr.5 <- classes$modules[[5]]$cmds %>% select(which.select) %>% as.matrix() %>% rcorr(type = "pearson")
 
 # create edge.list
 my_funk <- function(cor, n, pv =""){ 
@@ -47,17 +47,17 @@ df <- left_join(df, pv)
 df <- df %>% 
   arrange(Dim1, Dim2) %>% 
   mutate(Dim1 = recode(Dim1, 
-                       cmd.good.pole.4 = "Character",
-                       cmd.man.pole.3 = "Gender",
-                       cmd.white.pole.2 = "Race",
-                       cmd.young.pole.20 = "Age",
-                       cmd.honorable.pole.10 = "Status"),
+                       good_pole = "Character",
+                       man_pole = "Gender",
+                       white_pole = "Race",
+                       young_pole = "Age",
+                       influential_pole = "Status"),
          Dim2 = recode(Dim2, 
-                       cmd.good.pole.4 = "Character",
-                       cmd.man.pole.3 = "Gender",
-                       cmd.white.pole.2 = "Race",
-                       cmd.young.pole.20 = "Age",
-                       cmd.honorable.pole.10 = "Status") ) %>% 
+                       good_pole = "Character",
+                       man_pole = "Gender",
+                       white_pole = "Race",
+                       young_pole = "Age",
+                       influential_pole = "Status") ) %>% 
   mutate(Diff1 =  abs(Class1),
          Diff2 =  abs(Class2),
          Diff3 =  abs(Class3),
@@ -122,17 +122,17 @@ edges <- el.1 %>%
     select(Dim1, Dim2) %>% 
   arrange(Dim1, Dim2) %>% 
   mutate(Dim1 = recode(Dim1, 
-                       cmd.good.pole.4 = "Character",
-                       cmd.man.pole.3 = "Gender",
-                       cmd.white.pole.2 = "Race",
-                       cmd.young.pole.20 = "Age",
-                       cmd.honorable.pole.10 = "Status"),
+                       good_pole = "Character",
+                       man_pole = "Gender",
+                       white_pole = "Race",
+                       young_pole = "Age",
+                       influential_pole = "Status"),
          Dim2 = recode(Dim2, 
-                       cmd.good.pole.4 = "Character",
-                       cmd.man.pole.3 = "Gender",
-                       cmd.white.pole.2 = "Race",
-                       cmd.young.pole.20 = "Age",
-                       cmd.honorable.pole.10 = "Status") ) %>% 
+                       good_pole = "Character",
+                       man_pole = "Gender",
+                       white_pole = "Race",
+                       young_pole = "Age",
+                       influential_pole = "Status") ) %>% 
   cbind(max.temp, pos.temp, sig.temp)
 
 plot_funk <- function(x, max.row, pos.row, sig.row, hi.node) {

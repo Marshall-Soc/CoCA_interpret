@@ -29,7 +29,6 @@ colnames(cca.group3) <- "group3"
 cca.group3$rowid <- 1:nrow(cca.group3)
 cca.group3$rowid <- 1:nrow(cca.group3) %>% as.character()
 
-
 cca.group4 <- classes4$membership %>% as.data.frame()
 colnames(cca.group4) <- "group4"
 cca.group4$rowid <- 1:nrow(cca.group4)
