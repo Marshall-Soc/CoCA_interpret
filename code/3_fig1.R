@@ -30,6 +30,12 @@ pmat3 <- cor_pmat(corr.data3[vars])
 pmat4 <- cor_pmat(corr.data4[vars])
 pmat5 <- cor_pmat(corr.data5[vars])
 
+pmat1 <- pmat1[vars,vars]
+pmat2 <- pmat2[vars,vars]
+pmat3 <- pmat3[vars,vars]
+pmat4 <- pmat4[vars,vars]
+pmat5 <- pmat5[vars,vars]
+
 cor1 <- classes$modules[[1]]$cormat
 cor2 <- classes$modules[[2]]$cormat
 cor3 <- classes$modules[[3]]$cormat
@@ -48,7 +54,7 @@ n1 <- qgraph::qgraph(cor1,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #1", labels=c("race","gender","character",
+       title="", labels=c("race","gender","character",
                                   "status","age"))
 n2 <- qgraph::qgraph(cor2,
        graph = "cor",
@@ -58,7 +64,7 @@ n2 <- qgraph::qgraph(cor2,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #2", labels=c("race","gender","character",
+       title="", labels=c("race","gender","character",
                                   "status","age"))
 
 n3 <- qgraph::qgraph(cor3,
@@ -69,7 +75,7 @@ n3 <- qgraph::qgraph(cor3,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #3", labels=c("race","gender","character",
+       title="", labels=c("race","gender","character",
                                   "status","age"))
 
 n4 <- qgraph::qgraph(cor4,
@@ -80,7 +86,7 @@ n4 <- qgraph::qgraph(cor4,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #4", labels=c("race","gender","character",
+       title="", labels=c("race","gender","character",
                                   "status","age"))
 
 n5 <- qgraph::qgraph(cor5,
@@ -91,7 +97,7 @@ n5 <- qgraph::qgraph(cor5,
        posCol="black", negCol="black", negDashed=T,
        borders=T, shape = "circle", label.prop = 0.75,
        curveAll=F, edge.labels=F, edge.label.cex = 0.45, esize = 8,
-       title="Class #5", labels=c("race","gender","character",
+       title="", labels=c("race","gender","character",
                                   "status","age"))
 
 # -----------------------------------------------------------------------------
@@ -99,9 +105,9 @@ n5 <- qgraph::qgraph(cor5,
 # -----------------------------------------------------------------------------
 
 p1 <- ggcorrplot(corr1, hc.order = F, type = "lower",
-           lab = TRUE, p.mat=as.matrix(pmat1[,-1]), sig.level=0.05,
+           lab = TRUE, p.mat=pmat1, sig.level=0.05,
            colors=c("black","white","black"),
-           lab_col=c(rep("white",10)), lab_size=8, tl.cex=16) + 
+           lab_col=c(rep("white",10)), lab_size=8, tl.cex=16, pch.cex=14) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
                    labels=c("race","gender","character",
                             "status","age")) +
@@ -110,10 +116,10 @@ p1 <- ggcorrplot(corr1, hc.order = F, type = "lower",
                             "status","age"))
 
 p2 <- ggcorrplot(corr2, hc.order = F, type = "lower",
-                 lab = TRUE, p.mat=as.matrix(pmat2[,-1]), sig.level=0.05,
+                 lab = TRUE, p.mat=pmat2, sig.level=0.05,
                  colors=c("black","white","black"),
-                 lab_col=c(rep("white",6),"black",rep("white",2),"black"), lab_size=8,
-                tl.cex=16) +  
+                 lab_col=c(rep("white",7),rep("white",2),"black"), lab_size=8,
+                tl.cex=16, pch.cex=14) +  
   scale_y_discrete(limits = unique(colnames(corr1)),
                    labels=c("race","gender","character",
                             "status","age")) +
@@ -122,10 +128,10 @@ p2 <- ggcorrplot(corr2, hc.order = F, type = "lower",
                             "status","age"))
 
 p3 <- ggcorrplot(corr3, hc.order = F, type = "lower",
-                 lab = TRUE, p.mat=as.matrix(pmat3[,-1]), sig.level=0.05,
+                 lab = TRUE, p.mat=pmat3, sig.level=0.05,
                  colors=c("black","white","black"),
                  lab_col=c("white","black",rep("white",2),"black",rep("white",2),rep("black",2),"white"), 
-                 lab_size=8, tl.cex=16) + 
+                 lab_size=8, tl.cex=16, pch.cex=14) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
                    labels=c("race","gender","character",
                             "status","age")) +
@@ -134,10 +140,10 @@ p3 <- ggcorrplot(corr3, hc.order = F, type = "lower",
                             "status","age"))
 
 p4 <- ggcorrplot(corr4, hc.order = F, type = "lower",
-                 lab = TRUE, p.mat=as.matrix(pmat4[,-1]), sig.level=0.05,
+                 lab = TRUE, p.mat=pmat4, sig.level=0.05,
                  colors=c("black","white","black"),
                  lab_col=c("white",rep("black",2),rep("white",2),rep("black",5)), lab_size=8, 
-                 tl.cex=16) +  
+                 tl.cex=1, pch.cex=14) +  
   scale_y_discrete(limits = unique(colnames(corr1)),
                    labels=c("race","gender","character",
                             "status","age")) +
@@ -146,10 +152,10 @@ p4 <- ggcorrplot(corr4, hc.order = F, type = "lower",
                             "status","age"))
 
 p5 <- ggcorrplot(corr5, hc.order = F, type = "lower",
-                 lab = TRUE, p.mat=as.matrix(pmat5[,-1]), sig.level=0.05,
+                 lab = TRUE, p.mat=pmat5, sig.level=0.05,
                  colors=c("black","white","black"),
                  lab_col=c("black",rep("white",3),rep("black",3),rep("white",3)), lab_size=8, 
-                 tl.cex=16) + 
+                 tl.cex=16, pch.cex=14) + 
   scale_y_discrete(limits = unique(colnames(corr1)),
                    labels=c("race","gender","character",
                             "status","age")) +
