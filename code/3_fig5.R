@@ -56,9 +56,10 @@ female.prob.plot <- ggplot(female.rating, aes(x="1", y=prob.X1, group=female, co
                      labels=c("Man (Obama, McCain, Biden, and/or Bush)",
                               "Woman (Clinton and/or Palin)")) +
   guides(color = guide_legend(title.position = "top",
-                              title.hjust = 0.5)) +
+                              title.hjust = 0.5, direction = "vertical")) +
   scale_x_discrete(breaks=c("1","2","3","4","5"), labels=c("Class #1","Class #2",
-                                                           "Class #3","Class #4","Class #5"))
+                                                           "Class #3","Class #4","Class #5"),
+                   guide = guide_axis(n.dodge = 2))
 # scale_x_discrete(breaks=c("1","2","3","4","5"),
 #                  labels=c("Old\nInfluential Men,\nYoung\nMoral Women", "(Not) Old\nWhite Men",
 #                           "Anything But\nRace", "Ascribed vs.\nAchieved",
@@ -149,9 +150,9 @@ cand.prob.lib.plot <- ggplot(candidate.rating[which(candidate.rating$rating=="Li
 #                                                "Anything But\nGender")) +
 #coord_flip()
 
-png("figures/fig5.png", width = 14, height = 8.5, units = 'in', res = 350)
+png("figures/fig5.png", width = 10, height = 6, units = 'in', res = 350)
 ggarrange(female.prob.plot, ggarrange(cand.prob.cons.plot, cand.prob.lib.plot,
                                       common.legend = T, legend = "bottom", align="hv",
                                       nrow=2),
-          align="v", widths=c(1.5,1), ncol=2, labels=c("A","B"))
+          align="v", widths=c(.5,1), ncol=2, labels=c("A","B"))
 dev.off()
