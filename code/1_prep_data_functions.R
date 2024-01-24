@@ -79,7 +79,6 @@
 source("code/2_CoCA.R")
 # source("code/2_ner.R")
 source("code/2_models.R")
-source("code/2_models.R")
 source("code/3_fig1.R")
 source("code/3_fig2.R")
 source("code/3_fig3.R")

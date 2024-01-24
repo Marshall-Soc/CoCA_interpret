@@ -3,7 +3,7 @@
 # Make figure #4
 # -----------------------------------------------------------------------------
 
-fit.rating <- Effect("rating", model, xlevels = list(day = 201))
+fit.rating <- Effect("rating", model)
 
 fit.rating <- data.frame(fit.rating$x, fit.rating$prob, fit.rating$lower.prob,
                          fit.rating$upper.prob)
@@ -61,6 +61,6 @@ rating.prob.plot <- ggplot(fit.rating, aes(x="1", y=prob.X1, group=rating, color
 #                           "Anything But\nRace", "Ascribed vs.\nAchieved",
 #                           "Anything But\nGender"))
 
-png("figures/fig4.png", width = 8, height = 6, units = 'in', res = 350)
+png("figures/fig4.png", width = 6, height = 4, units = 'in', res = 350)
 rating.prob.plot
 dev.off()
