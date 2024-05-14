@@ -81,7 +81,7 @@ summary(fit.same)
 lavTestLRT(fit.same,fit.diff)
 
 # -----------------------------------------------------------------------------
-# Make table #3 (multiple group test comparing k-class partitions)
+# Make table #4 (multiple group test comparing k-class partitions)
 # -----------------------------------------------------------------------------
 
 fit.diff2 <- cfa(model, data = blog.data, group = "group2")
