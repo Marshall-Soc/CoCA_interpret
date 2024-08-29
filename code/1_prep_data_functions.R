@@ -9,7 +9,8 @@
                 stringr, tidyr, tidytext, lavaan, Hmisc,
                 tm, nnet, entity, gmodels, rstatix, ggraph,
                 effects, reshape2, margins, ggcorrplot,
-                ggpubr, lsmeans, install = TRUE)
+                ggpubr, lsmeans, tidyverse, 
+                install = TRUE)
 
 # -----------------------------------------------------------------------------
 # DATA
